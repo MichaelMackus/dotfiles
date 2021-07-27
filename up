@@ -1,0 +1,64 @@
+#!/bin/sh
+
+dir=$(pwd `basename $0`)
+error=0
+
+# setup symlinks
+{
+    error=0
+    while IFS=' ' read -r src dest; do
+        if [ -z "$dest" ]; then
+            echo "Error: empty destination for source $src"
+            continue
+        fi
+
+        eval dest=$dest # fix tilde expansion
+
+        if [ -L "$dest" ]; then
+            echo "$dest already exists"
+            continue
+        fi
+        if [ -e "$dest" ]; then
+            echo "ERROR: $dest already exists and is not a link!" > /dev/stderr
+            error=1
+            continue
+        fi
+
+        ln -s "$dir/$src" "$dest"
+    done < "$dir/links"
+
+    if [ "$error" -gt 0 ] && [ "$1" != "-f" ]; then
+        echo "Continue? [y/N]"
+        read yn
+        if [ "$yn" = "${yn#[Yy]}" ]; then
+            exit $error
+        fi
+    fi
+}
+
+# compilation & post-setup
+{
+    mkdir -p ~/.vim/autoload ~/.vim/bundle && \
+    curl -LSso ~/.vim/autoload/pathogen.vim https://tpo.pe/pathogen.vim
+
+    if ! ( grep ". $dir/common.sh" ~/.profile ); then
+        echo ". $dir/common.sh" >> ~/.profile
+    fi
+    if ! ( grep ". $dir/common.sh" ~/.bashrc ); then
+        echo ". $dir/common.sh" >> ~/.bashrc
+    fi
+    if ! ( grep ". $dir/bash.sh" ~/.bashrc ); then
+        echo ". $dir/bash.sh" >> ~/.bashrc
+    fi
+
+    cd "$dir/dwm"
+    patch --forward -p1 < "$dir/dwm-titlecolor-20190206-6.2.diff"
+    cp "$dir/dwm-config.h" "$dir/dwm/config.h"
+    make
+    make install PREFIX=~
+
+    cd "$dir/st"
+    cp "$dir/st-config.h" "$dir/st/config.h"
+    make
+    make install PREFIX=~
+}

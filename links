@@ -1,0 +1,5 @@
+vim ~/.vim
+vim/.vimrc ~/.vimrc
+.xinitrc ~/.xinitrc
+st-config.h st/config.h
+dwm-config.h dwm/config.h
